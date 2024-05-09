@@ -7,6 +7,7 @@ import (
 	"github.com/10fu3/square/common"
 	"github.com/10fu3/square/common/Operator"
 	"github.com/10fu3/square/common/Orderby"
+	"github.com/10fu3/square/common/where"
 	"github.com/10fu3/square/lib"
 	"strings"
 )
@@ -51,33 +52,26 @@ type SelectColumnsQuery struct {
 	Columns map[string]ColumnQuery
 }
 
-type WhereQueryColumn struct {
-	ColumnName    string
-	Placeholder   []any
-	ConstantValue string
-	Operator      Operator.Type
-}
-
-func (w *WhereQueryColumn) BuildWhereQuery(table string) (string, []any) {
-	switch w.Operator {
+func BuildWhereOperator(w where.Op, table string) (string, []any) {
+	switch w.Operator() {
 	case Operator.True:
 		return "true", []any{}
 	case Operator.IsNull:
 		return fmt.Sprintf("%s.%s IS NULL", table, w.ColumnName), []any{}
 	case Operator.In:
-		inValues := make([]string, len(w.Placeholder))
-		for i, _ := range w.Placeholder {
+		inValues := make([]string, len(w.Args()))
+		for i, _ := range w.Args() {
 			inValues[i] = "?"
 		}
-		return fmt.Sprintf("%s.%s IN (%s)", table, w.ColumnName, strings.Join(inValues, ", ")), w.Placeholder
+		return fmt.Sprintf("%s.%s IN (%s)", table, w.ColumnName, strings.Join(inValues, ", ")), w.Args()
 	case Operator.NotIn:
-		inValues := make([]string, len(w.Placeholder))
-		for i, _ := range w.Placeholder {
+		inValues := make([]string, len(w.Args()))
+		for i, _ := range w.Args() {
 			inValues[i] = "?"
 		}
-		return fmt.Sprintf("%s.%s NOT IN (%s)", table, w.ColumnName, strings.Join(inValues, ", ")), w.Placeholder
+		return fmt.Sprintf("%s.%s NOT IN (%s)", table, w.ColumnName, strings.Join(inValues, ", ")), w.Args()
 	case Operator.Eq, Operator.Gt, Operator.Gte, Operator.Lt, Operator.Lte, Operator.Neq:
-		return fmt.Sprintf("%s.%s %s ?", table, w.ColumnName, w.Operator), w.Placeholder
+		return fmt.Sprintf("%s.%s %s ?", table, w.ColumnName, w.Operator), w.Args()
 	}
 	return "", []any{}
 }
@@ -90,7 +84,7 @@ type WhereRelationQuery struct {
 }
 
 type WhereQuery struct {
-	Column   []WhereQueryColumn
+	Column   []where.Op
 	Relation *WhereRelationQuery
 	And      []WhereQuery
 	Or       []WhereQuery
@@ -122,7 +116,7 @@ func BuildWhereQuery(w *WhereQuery, thisTable string) (string, []any) {
 
 	if len(w.Column) > 0 {
 		for _, column := range w.Column {
-			columnConditions, columnPreparedStmt := column.BuildWhereQuery(thisTable)
+			columnConditions, columnPreparedStmt := BuildWhereOperator(column, thisTable)
 			conditions = append(conditions, columnConditions)
 			preparedStmt = append(preparedStmt, columnPreparedStmt...)
 		}
