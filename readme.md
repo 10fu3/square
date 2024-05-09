@@ -2,108 +2,98 @@
 ### typed query
 ```go
 func executeSql() {
-    q := TableQuery{
-        From: "video",
-        Fields: ColumnsQuery{
-            Columns: map[string]ColumnQuery{
-                "id":    {},
-                "title": {},
+    structuredQuery := square.TableQuery{
+        From: "video", 
+        Fields: square.ColumnsQuery{
+            Columns: map[string]square.ColumnQuery{
+                "id":    {}, 
+                "title": {}, 
                 "video_actor": {
-                    Relation: &TableQuery{
-                        Relation: &RelationTableQuery{
-                            ParentName: "video",
-                            ThisName:   "video_actor",
-                            Columns: []RelationColumn{
+                    Relation: &square.TableQuery{
+                        Relation: &square.RelationTableQuery{
+                            ParentName: "video", 
+                            ThisName:   "video_actor", 
+                            Columns: []square.RelationColumn{
                                 {
-                                    Parent: "id",
+                                    Parent: "id", 
                                     This:   "video_id",
                                 },
                             },
-                        },
-                        From: "video_actor",
-                        Fields: ColumnsQuery{
-                            Columns: map[string]ColumnQuery{
-                                "video_id": {},
+                        }, 
+                        From: "video_actor", 
+                        Fields: square.ColumnsQuery{
+                            Columns: map[string]square.ColumnQuery{
+                                "video_id": {}, 
                                 "actor": {
-                                    Relation: &TableQuery{
-                                        From: "actor",
-                                        Fields: ColumnsQuery{
-                                            Columns: map[string]ColumnQuery{
-                                                "id":   {},
-                                                // set different column name
+                                    Relation: &square.TableQuery{
+                                        From: "actor", 
+                                        Fields: square.ColumnsQuery{
+                                            Columns: map[string]square.ColumnQuery{
+                                                "id": {}, 
                                                 "actor_name": {
                                                     ColumnName: "name",
-                                                }, 
+                                                },
                                             },
-                                        },
-                                        Relation: &RelationTableQuery{
-                                            ParentName: "video_actor",
-                                            ThisName:   "actor",
-                                            Columns: []RelationColumn{
+                                        }, 
+                                        Relation: &square.RelationTableQuery{
+                                            ParentName: "video_actor", 
+                                            ThisName:   "actor", 
+                                            Columns: []square.RelationColumn{
                                                 {
-                                                    Parent: "actor_id",
+                                                    Parent: "actor_id", 
                                                     This:   "id",
                                                 },
                                             },
-                                        },
-                                        Orderby: []OrderbyQuery{
+                                        }, 
+                                        Orderby: []square.OrderbyQuery{
                                             {
-                                                Column: "id",
+                                                Column: "id", 
                                                 Order:  Orderby.Desc,
                                             },
                                         },
                                     },
                                 },
                             },
-                        },
-                        Orderby: []OrderbyQuery{
+                        }, 
+                        Orderby: []square.OrderbyQuery{
                             {
-                                Column: "video_id",
+                                Column: "video_id", 
                                 Order:  Orderby.Desc,
                             },
                         },
                     },
                 },
             },
-        },
-        // set relation where query
-        Where: WhereQuery{
-            Column: []WhereQueryColumn{
-                {
-                    ColumnName:  "id",
-                    Operator:    Operator.Eq,
-                    Placeholder: []any{1},
-                },
-            },
-            Relation: &WhereRelationQuery{
-                ParentTable:   "video",
-                ChildrenTable: "video_actor",
-                Columns: []RelationColumn{
+        }, 
+        Where: square.WhereQuery{
+            Column: []where.Op{
+                where.Eq("id", 1),
+            }, 
+            Relation: &square.WhereRelationQuery{
+                ParentTable:   "video", 
+                ChildrenTable: "video_actor", 
+                Columns: []square.RelationColumn{
                     {
-                        Parent: "id",
+                        Parent: "id", 
                         This:   "video_id",
                     },
-                },
-                Where: &WhereQuery{
-                    Column: []WhereQueryColumn{
-                        {
-                            ColumnName:  "actor_id",
-                            Operator:    Operator.Eq,
-                            Placeholder: []any{1},
-                        },
+                }, 
+                Where: &square.WhereQuery{
+                    Column: []where.Op{
+                        where.Eq("video_id", 1),
                     },
                 },
             },
-        },
+        }, 
         Offset: lib.Optional[uint]{
             Value: 0,
-        },
-        //Limit: lib.Optional[uint]{
-        //    Value: 10,
-        //},
-        Orderby: []OrderbyQuery{
+        }, 
+        Limit: lib.Optional[uint]{
+            Value: 10,
+        }, 
+        Orderby: []square.OrderbyQuery{
             {
-                Column: "id",
+                Column: "id", 
                 Order:  Orderby.Desc,
             },
         },
