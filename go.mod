@@ -1,4 +1,5 @@
-module square
+module github.com/10fu3/square
+
 
 go 1.22
 

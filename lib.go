@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"square/common"
-	"square/common/Operator"
-	"square/common/Orderby"
-	"square/lib"
+	"github.com/10fu3/square/common"
+	"github.com/10fu3/square/common/Operator"
+	"github.com/10fu3/square/common/Orderby"
+	"github.com/10fu3/square/lib"
 	"strings"
 )
 
