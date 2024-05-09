@@ -2,55 +2,54 @@ package common
 
 import (
 	"fmt"
-	"github.com/10fu3/square/lib"
+	"github.com/10fu3/square/squrare/lib"
 	"strings"
 	"sync/atomic"
+	"time"
 )
 
-type Float float64
-
-type FloatCompExp struct {
-	Eq     lib.Optional[Float]
-	Gt     lib.Optional[Float]
-	Gte    lib.Optional[Float]
-	Lt     lib.Optional[Float]
-	Lte    lib.Optional[Float]
-	Neq    lib.Optional[Float]
-	In     []Float
-	NotIn  []Float
-	IsNull Bool
+type TimeCompExp struct {
+	Eq     lib.Optional[time.Time]
+	Gt     lib.Optional[time.Time]
+	Gte    lib.Optional[time.Time]
+	Lt     lib.Optional[time.Time]
+	Lte    lib.Optional[time.Time]
+	Neq    lib.Optional[time.Time]
+	In     []time.Time
+	NotIn  []time.Time
+	IsNull lib.Optional[Bool]
 }
 
-func (exp *FloatCompExp) BuildQuery(preparedStatementOrder *atomic.Uint64, preparedStmtOrderAndValue map[uint64]any, field string) string {
+func (exp *TimeCompExp) BuildQuery(preparedStatementOrder *atomic.Uint64, preparedStmtOrderAndValue map[uint64]any, field string) string {
 	var conditions []string
 
 	if exp.Eq.IsPresent() {
-		preparedStmtOrderAndValue[preparedStatementOrder.Add(1)] = exp.Eq.Value
+		preparedStmtOrderAndValue[preparedStatementOrder.Add(1)] = exp.Eq.Value.Format(time.DateTime)
 		conditions = append(conditions, fmt.Sprintf("(%s = ?)", field))
 	}
 
 	if exp.Gt.IsPresent() {
-		preparedStmtOrderAndValue[preparedStatementOrder.Add(1)] = exp.Gt.Value
+		preparedStmtOrderAndValue[preparedStatementOrder.Add(1)] = exp.Gt.Value.Format(time.DateTime)
 		conditions = append(conditions, fmt.Sprintf("(%s > ?)", field))
 	}
 
 	if exp.Gte.IsPresent() {
-		preparedStmtOrderAndValue[preparedStatementOrder.Add(1)] = exp.Gte.Value
+		preparedStmtOrderAndValue[preparedStatementOrder.Add(1)] = exp.Gte.Value.Format(time.DateTime)
 		conditions = append(conditions, fmt.Sprintf("(%s >= ?)", field))
 	}
 
 	if exp.Lt.IsPresent() {
-		preparedStmtOrderAndValue[preparedStatementOrder.Add(1)] = exp.Lt.Value
+		preparedStmtOrderAndValue[preparedStatementOrder.Add(1)] = exp.Lt.Value.Format(time.DateTime)
 		conditions = append(conditions, fmt.Sprintf("(%s < ?)", field))
 	}
 
 	if exp.Lte.IsPresent() {
-		preparedStmtOrderAndValue[preparedStatementOrder.Add(1)] = exp.Lte.Value
+		preparedStmtOrderAndValue[preparedStatementOrder.Add(1)] = exp.Lte.Value.Format(time.DateTime)
 		conditions = append(conditions, fmt.Sprintf("(%s <= ?)", field))
 	}
 
 	if exp.Neq.IsPresent() {
-		preparedStmtOrderAndValue[preparedStatementOrder.Add(1)] = exp.Neq.Value
+		preparedStmtOrderAndValue[preparedStatementOrder.Add(1)] = exp.Neq.Value.Format(time.DateTime)
 		conditions = append(conditions, fmt.Sprintf("(%s != ?)", field))
 	}
 
@@ -58,7 +57,7 @@ func (exp *FloatCompExp) BuildQuery(preparedStatementOrder *atomic.Uint64, prepa
 		expCondition := make([]string, len(exp.In))
 		for i, v := range exp.In {
 			expCondition[i] = "?"
-			preparedStmtOrderAndValue[preparedStatementOrder.Add(1)] = v
+			preparedStmtOrderAndValue[preparedStatementOrder.Add(1)] = v.Format(time.DateTime)
 		}
 		conditions = append(conditions, fmt.Sprintf("(%s IN (%s))", field, strings.Join(expCondition, ", ")))
 	}
@@ -67,12 +66,12 @@ func (exp *FloatCompExp) BuildQuery(preparedStatementOrder *atomic.Uint64, prepa
 		expCondition := make([]string, len(exp.NotIn))
 		for i, v := range exp.NotIn {
 			expCondition[i] = "?"
-			preparedStmtOrderAndValue[preparedStatementOrder.Add(1)] = v
+			preparedStmtOrderAndValue[preparedStatementOrder.Add(1)] = v.Format(time.DateTime)
 		}
 		conditions = append(conditions, fmt.Sprintf("(%s NOT IN (%s))", field, strings.Join(expCondition, ", ")))
 	}
 
-	if exp.IsNull {
+	if exp.IsNull.IsPresent() {
 		conditions = append(conditions, fmt.Sprintf("(%s IS NULL)", field))
 	}
 

@@ -2,7 +2,7 @@ package common
 
 import (
 	"fmt"
-	"github.com/10fu3/square/lib"
+	"github.com/10fu3/square/squrare/lib"
 	"strings"
 	"sync/atomic"
 )

@@ -2,29 +2,33 @@ package common
 
 import (
 	"fmt"
-	"github.com/10fu3/square/lib"
+	"github.com/10fu3/square/squrare/lib"
+
 	"strings"
 	"sync/atomic"
 )
 
-type Str string
+type Uint uint
 
-type StrCompExp struct {
-	Eq      lib.Optional[string]
-	Gt      lib.Optional[string]
-	Gte     lib.Optional[string]
-	Lt      lib.Optional[string]
-	Lte     lib.Optional[string]
-	Neq     lib.Optional[string]
-	Like    lib.Optional[string]
-	NotLike lib.Optional[string]
-	Ilike   lib.Optional[string]
-	In      []string
-	NotIn   []string
-	IsNull  lib.Optional[bool]
+func (u Uint) String() string {
+	return fmt.Sprint(uint(u))
 }
 
-func (exp *StrCompExp) BuildQuery(preparedStatementOrder *atomic.Uint64, preparedStmtOrderAndValue map[uint64]any, field string) string {
+type Int int
+
+type IntCompExp struct {
+	Eq     lib.Optional[Int]
+	Gt     lib.Optional[Int]
+	Gte    lib.Optional[Int]
+	Lt     lib.Optional[Int]
+	Lte    lib.Optional[Int]
+	Neq    lib.Optional[Int]
+	In     []Int
+	NotIn  []Int
+	IsNull bool
+}
+
+func (exp *IntCompExp) BuildQuery(preparedStatementOrder *atomic.Uint64, preparedStmtOrderAndValue map[uint64]any, field string) string {
 	var conditions []string
 
 	if exp.Eq.IsPresent() {
@@ -75,7 +79,7 @@ func (exp *StrCompExp) BuildQuery(preparedStatementOrder *atomic.Uint64, prepare
 		conditions = append(conditions, fmt.Sprintf("(%s NOT IN (%s))", field, strings.Join(expCondition, ", ")))
 	}
 
-	if exp.IsNull.IsPresent() {
+	if exp.IsNull {
 		conditions = append(conditions, fmt.Sprintf("(%s IS NULL)", field))
 	}
 
