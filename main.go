@@ -7,22 +7,21 @@ import (
 	"square/common/Operator"
 	"square/common/Orderby"
 	"square/lib"
-	"square/square"
 )
 
 func a() {
-	structuredQuery := square.TableQuery{
+	structuredQuery := TableQuery{
 		From: "video",
-		Fields: square.ColumnsQuery{
-			Columns: map[string]square.ColumnQuery{
+		Fields: ColumnsQuery{
+			Columns: map[string]ColumnQuery{
 				"id":    {},
 				"title": {},
 				"video_actor": {
-					Relation: &square.TableQuery{
-						Relation: &square.RelationTableQuery{
+					Relation: &TableQuery{
+						Relation: &RelationTableQuery{
 							ParentName: "video",
 							ThisName:   "video_actor",
-							Columns: []square.RelationColumn{
+							Columns: []RelationColumn{
 								{
 									Parent: "id",
 									This:   "video_id",
@@ -30,31 +29,31 @@ func a() {
 							},
 						},
 						From: "video_actor",
-						Fields: square.ColumnsQuery{
-							Columns: map[string]square.ColumnQuery{
+						Fields: ColumnsQuery{
+							Columns: map[string]ColumnQuery{
 								"video_id": {},
 								"actor": {
-									Relation: &square.TableQuery{
+									Relation: &TableQuery{
 										From: "actor",
-										Fields: square.ColumnsQuery{
-											Columns: map[string]square.ColumnQuery{
+										Fields: ColumnsQuery{
+											Columns: map[string]ColumnQuery{
 												"id": {},
 												"actor_name": {
 													ColumnName: "name",
 												},
 											},
 										},
-										Relation: &square.RelationTableQuery{
+										Relation: &RelationTableQuery{
 											ParentName: "video_actor",
 											ThisName:   "actor",
-											Columns: []square.RelationColumn{
+											Columns: []RelationColumn{
 												{
 													Parent: "actor_id",
 													This:   "id",
 												},
 											},
 										},
-										Orderby: []square.OrderbyQuery{
+										Orderby: []OrderbyQuery{
 											{
 												Column: "id",
 												Order:  Orderby.Desc,
@@ -64,7 +63,7 @@ func a() {
 								},
 							},
 						},
-						Orderby: []square.OrderbyQuery{
+						Orderby: []OrderbyQuery{
 							{
 								Column: "video_id",
 								Order:  Orderby.Desc,
@@ -74,25 +73,25 @@ func a() {
 				},
 			},
 		},
-		Where: square.WhereQuery{
-			Column: []square.WhereQueryColumn{
+		Where: WhereQuery{
+			Column: []WhereQueryColumn{
 				{
 					ColumnName:  "id",
 					Operator:    Operator.Eq,
 					Placeholder: []any{1},
 				},
 			},
-			Relation: &square.WhereRelationQuery{
+			Relation: &WhereRelationQuery{
 				ParentTable:   "video",
 				ChildrenTable: "video_actor",
-				Columns: []square.RelationColumn{
+				Columns: []RelationColumn{
 					{
 						Parent: "id",
 						This:   "video_id",
 					},
 				},
-				Where: &square.WhereQuery{
-					Column: []square.WhereQueryColumn{
+				Where: &WhereQuery{
+					Column: []WhereQueryColumn{
 						{
 							ColumnName:  "actor_id",
 							Operator:    Operator.Eq,
@@ -108,7 +107,7 @@ func a() {
 		Limit: lib.Optional[uint]{
 			Value: 10,
 		},
-		Orderby: []square.OrderbyQuery{
+		Orderby: []OrderbyQuery{
 			{
 				Column: "id",
 				Order:  Orderby.Desc,
@@ -135,7 +134,7 @@ func a() {
 	}
 	defer conn.Close()
 
-	err = square.FetchQuery(conn, &structuredQuery, &result)
+	err = FetchQuery(conn, &structuredQuery, &result)
 
 	if err != nil {
 		panic(err)

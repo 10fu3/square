@@ -1,4 +1,4 @@
-package square
+package main
 
 import (
 	"database/sql"
