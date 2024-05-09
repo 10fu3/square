@@ -57,21 +57,21 @@ func BuildWhereOperator(w where.Op, table string) (string, []any) {
 	case Operator.True:
 		return "true", []any{}
 	case Operator.IsNull:
-		return fmt.Sprintf("%s.%s IS NULL", table, w.ColumnName), []any{}
+		return fmt.Sprintf("%s.%s IS NULL", table, w.ColumnName()), []any{}
 	case Operator.In:
 		inValues := make([]string, len(w.Args()))
 		for i, _ := range w.Args() {
 			inValues[i] = "?"
 		}
-		return fmt.Sprintf("%s.%s IN (%s)", table, w.ColumnName, strings.Join(inValues, ", ")), w.Args()
+		return fmt.Sprintf("%s.%s IN (%s)", table, w.ColumnName(), strings.Join(inValues, ", ")), w.Args()
 	case Operator.NotIn:
 		inValues := make([]string, len(w.Args()))
 		for i, _ := range w.Args() {
 			inValues[i] = "?"
 		}
-		return fmt.Sprintf("%s.%s NOT IN (%s)", table, w.ColumnName, strings.Join(inValues, ", ")), w.Args()
+		return fmt.Sprintf("%s.%s NOT IN (%s)", table, w.ColumnName(), strings.Join(inValues, ", ")), w.Args()
 	case Operator.Eq, Operator.Gt, Operator.Gte, Operator.Lt, Operator.Lte, Operator.Neq:
-		return fmt.Sprintf("%s.%s %s ?", table, w.ColumnName, w.Operator), w.Args()
+		return fmt.Sprintf("%s.%s %s ?", table, w.ColumnName(), w.Operator()), w.Args()
 	}
 	return "", []any{}
 }
