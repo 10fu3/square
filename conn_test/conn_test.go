@@ -1,27 +1,29 @@
-package main
+package conn_test
 
 import (
 	"database/sql"
 	"fmt"
-	"github.com/10fu3/square/squrare/common/Operator"
-	"github.com/10fu3/square/squrare/common/Orderby"
-	"github.com/10fu3/square/squrare/lib"
+	"github.com/10fu3/square"
+	"github.com/10fu3/square/common/Operator"
+	"github.com/10fu3/square/common/Orderby"
+	"github.com/10fu3/square/lib"
 	_ "github.com/go-sql-driver/mysql"
+	"testing"
 )
 
-func a() {
-	structuredQuery := TableQuery{
+func TestCoverArray(t *testing.T) {
+	structuredQuery := square.TableQuery{
 		From: "video",
-		Fields: ColumnsQuery{
-			Columns: map[string]ColumnQuery{
+		Fields: square.ColumnsQuery{
+			Columns: map[string]square.ColumnQuery{
 				"id":    {},
 				"title": {},
 				"video_actor": {
-					Relation: &TableQuery{
-						Relation: &RelationTableQuery{
+					Relation: &square.TableQuery{
+						Relation: &square.RelationTableQuery{
 							ParentName: "video",
 							ThisName:   "video_actor",
-							Columns: []RelationColumn{
+							Columns: []square.RelationColumn{
 								{
 									Parent: "id",
 									This:   "video_id",
@@ -29,31 +31,31 @@ func a() {
 							},
 						},
 						From: "video_actor",
-						Fields: ColumnsQuery{
-							Columns: map[string]ColumnQuery{
+						Fields: square.ColumnsQuery{
+							Columns: map[string]square.ColumnQuery{
 								"video_id": {},
 								"actor": {
-									Relation: &TableQuery{
+									Relation: &square.TableQuery{
 										From: "actor",
-										Fields: ColumnsQuery{
-											Columns: map[string]ColumnQuery{
+										Fields: square.ColumnsQuery{
+											Columns: map[string]square.ColumnQuery{
 												"id": {},
 												"actor_name": {
 													ColumnName: "name",
 												},
 											},
 										},
-										Relation: &RelationTableQuery{
+										Relation: &square.RelationTableQuery{
 											ParentName: "video_actor",
 											ThisName:   "actor",
-											Columns: []RelationColumn{
+											Columns: []square.RelationColumn{
 												{
 													Parent: "actor_id",
 													This:   "id",
 												},
 											},
 										},
-										Orderby: []OrderbyQuery{
+										Orderby: []square.OrderbyQuery{
 											{
 												Column: "id",
 												Order:  Orderby.Desc,
@@ -63,7 +65,7 @@ func a() {
 								},
 							},
 						},
-						Orderby: []OrderbyQuery{
+						Orderby: []square.OrderbyQuery{
 							{
 								Column: "video_id",
 								Order:  Orderby.Desc,
@@ -73,25 +75,25 @@ func a() {
 				},
 			},
 		},
-		Where: WhereQuery{
-			Column: []WhereQueryColumn{
+		Where: square.WhereQuery{
+			Column: []square.WhereQueryColumn{
 				{
 					ColumnName:  "id",
 					Operator:    Operator.Eq,
 					Placeholder: []any{1},
 				},
 			},
-			Relation: &WhereRelationQuery{
+			Relation: &square.WhereRelationQuery{
 				ParentTable:   "video",
 				ChildrenTable: "video_actor",
-				Columns: []RelationColumn{
+				Columns: []square.RelationColumn{
 					{
 						Parent: "id",
 						This:   "video_id",
 					},
 				},
-				Where: &WhereQuery{
-					Column: []WhereQueryColumn{
+				Where: &square.WhereQuery{
+					Column: []square.WhereQueryColumn{
 						{
 							ColumnName:  "actor_id",
 							Operator:    Operator.Eq,
@@ -107,7 +109,7 @@ func a() {
 		Limit: lib.Optional[uint]{
 			Value: 10,
 		},
-		Orderby: []OrderbyQuery{
+		Orderby: []square.OrderbyQuery{
 			{
 				Column: "id",
 				Order:  Orderby.Desc,
@@ -134,15 +136,11 @@ func a() {
 	}
 	defer conn.Close()
 
-	err = FetchQuery(conn, &structuredQuery, &result)
+	err = square.FetchQuery(conn, &structuredQuery, &result)
 
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Println(result)
-}
-
-func main() {
-	a()
 }
