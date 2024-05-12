@@ -84,6 +84,10 @@ type WhereRelationQuery struct {
 }
 
 type WhereQuery struct {
+	joinFrom *struct {
+		tableName string
+		columns   []RelationColumn
+	}
 	Column   []where.Op
 	Relation *WhereRelationQuery
 	And      []WhereQuery
@@ -120,6 +124,14 @@ func BuildWhereQuery(w *WhereQuery, thisTable string) (string, []any) {
 			conditions = append(conditions, columnConditions)
 			preparedStmt = append(preparedStmt, columnPreparedStmt...)
 		}
+	}
+
+	if w.joinFrom != nil {
+		relationships := []string{}
+		for _, column := range w.joinFrom.columns {
+			relationships = append(relationships, fmt.Sprintf(" ( \n%s.%s = %s.%s\n ) ", w.joinFrom.tableName, column.Parent, thisTable, column.This))
+		}
+		conditions = append(conditions, strings.Join(relationships, " AND "))
 	}
 
 	if w.Relation != nil {
@@ -167,32 +179,24 @@ func BuildWhereQuery(w *WhereQuery, thisTable string) (string, []any) {
 
 type GenerateQuery string
 
-var jsonArrayQuery = `
-SELECT
+var jsonArrayQuery = `SELECT
 COALESCE(
     JSON_ARRAYAGG(__json__),
     CONVERT('[]', JSON)
 ) AS __data__
 FROM
-(%s) AS __data__
-`
+(%s) AS __data__`
 
-var fieldJsonQuery = `
-JSON_OBJECT(%s) AS %s
-`
+var fieldJsonQuery = `JSON_OBJECT(%s) AS %s`
 
-var jsonArrayElement = `
-SELECT
+var jsonArrayElement = `SELECT
 %s
 FROM %s AS %s
-WHERE %s
-`
+WHERE %s`
 
-var jsonQuery = `
-SELECT
+var jsonQuery = `SELECT
 %s
-FROM (%s) AS %s
-`
+FROM (%s) AS %s`
 
 func buildOneResultQuery(q *TableQuery) (GenerateQuery, []any, error) {
 	preparedStmt := []any{}
@@ -206,6 +210,13 @@ func buildOneResultQuery(q *TableQuery) (GenerateQuery, []any, error) {
 		jsonFields = append(jsonFields, fmt.Sprintf("'%s', %s.%s", k, innnerTableName, v.ColumnName))
 
 		if v.Relation != nil {
+			v.Relation.Where.joinFrom = &struct {
+				tableName string
+				columns   []RelationColumn
+			}{
+				tableName: innnerTableName,
+				columns:   v.Relation.Relation.Columns,
+			}
 			refQuery, refQueryPstmt, err := BuildQuery(v.Relation)
 			if err != nil {
 				return "", nil, err
@@ -227,19 +238,47 @@ func buildOneResultQuery(q *TableQuery) (GenerateQuery, []any, error) {
 		"__json__",
 	)
 
-	whereQuery, whrePstmtv := BuildWhereQuery(&q.Where, innnerTableName)
+	whereQuery, wherePstmt := BuildWhereQuery(&q.Where, innnerTableName)
 
 	innerSelect := fmt.Sprintf(
 		jsonArrayElement,
-		jsonSelect,
+		strings.Join(innerFields, ",\n"),
 		q.From,
 		innnerTableName,
 		whereQuery,
 	)
 
-	preparedStmt = append(preparedStmt, whrePstmtv...)
+	//todo: Subquery returns more than 1 row
+	preparedStmt = append(preparedStmt, wherePstmt...)
 
-	return GenerateQuery(innerSelect), preparedStmt, nil
+	elemQuery := fmt.Sprintf(
+		jsonQuery,
+		jsonSelect,
+		innerSelect,
+		innnerTableName,
+	)
+
+	orderByQuery := []string{}
+	for _, orderByColumn := range q.Orderby {
+		orderByQuery = append(orderByQuery, fmt.Sprintf("%s.%s %s", innnerTableName, orderByColumn.Column, orderByColumn.Order))
+	}
+
+	if len(orderByQuery) > 0 {
+		elemQuery = fmt.Sprintf(
+			"%s\nORDER BY %s",
+			elemQuery,
+			strings.Join(orderByQuery, ", "),
+		)
+	}
+
+	elemQuery = fmt.Sprintf(
+		"%s\nLIMIT %d OFFSET %d",
+		elemQuery,
+		1,
+		q.Offset.GetOrDefault(0),
+	)
+
+	return GenerateQuery(elemQuery), preparedStmt, nil
 }
 
 func buildManyResultQuery(q *TableQuery) (GenerateQuery, []any, error) {
@@ -256,6 +295,13 @@ func buildManyResultQuery(q *TableQuery) (GenerateQuery, []any, error) {
 		jsonFields = append(jsonFields, fmt.Sprintf("'%s', %s.%s", k, innnerTableName, v.ColumnName))
 
 		if v.Relation != nil {
+			v.Relation.Where.joinFrom = &struct {
+				tableName string
+				columns   []RelationColumn
+			}{
+				tableName: innnerTableName,
+				columns:   v.Relation.Relation.Columns,
+			}
 			refQuery, pstmt, err := BuildQuery(v.Relation)
 			if err != nil {
 				return "", nil, err

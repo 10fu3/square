@@ -2,10 +2,11 @@ package conn_test
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"github.com/10fu3/square"
-	"github.com/10fu3/square/common/Operator"
 	"github.com/10fu3/square/common/Orderby"
+	"github.com/10fu3/square/common/where"
 	"github.com/10fu3/square/lib"
 	_ "github.com/go-sql-driver/mysql"
 	"testing"
@@ -36,13 +37,12 @@ func TestCoverArray(t *testing.T) {
 								"video_id": {},
 								"actor": {
 									Relation: &square.TableQuery{
-										From: "actor",
+										IsFindOne: true,
+										From:      "actor",
 										Fields: square.ColumnsQuery{
 											Columns: map[string]square.ColumnQuery{
-												"id": {},
-												"actor_name": {
-													ColumnName: "name",
-												},
+												"id":   {},
+												"name": {},
 											},
 										},
 										Relation: &square.RelationTableQuery{
@@ -76,31 +76,8 @@ func TestCoverArray(t *testing.T) {
 			},
 		},
 		Where: square.WhereQuery{
-			Column: []square.WhereQueryColumn{
-				{
-					ColumnName:  "id",
-					Operator:    Operator.Eq,
-					Placeholder: []any{1},
-				},
-			},
-			Relation: &square.WhereRelationQuery{
-				ParentTable:   "video",
-				ChildrenTable: "video_actor",
-				Columns: []square.RelationColumn{
-					{
-						Parent: "id",
-						This:   "video_id",
-					},
-				},
-				Where: &square.WhereQuery{
-					Column: []square.WhereQueryColumn{
-						{
-							ColumnName:  "actor_id",
-							Operator:    Operator.Eq,
-							Placeholder: []any{1},
-						},
-					},
-				},
+			Column: []where.Op{
+				where.Eq("id", 1),
 			},
 		},
 		Offset: lib.Optional[uint]{
@@ -122,12 +99,16 @@ func TestCoverArray(t *testing.T) {
 		VideoTitle string `json:"video_title"`
 		VideoActor []struct {
 			VideoId int `json:"video_id"`
-			Actor   []struct {
-				Id        int    `json:"id"`
-				ActorName string `json:"actor_name"`
+			Actor   struct {
+				Id   int    `json:"id"`
+				Name string `json:"name"`
 			} `json:"actor"`
 		} `json:"video_actor"`
 	}
+
+	g, _, _ := square.BuildQuery(&structuredQuery)
+
+	fmt.Println(g)
 
 	// connection db
 	conn, err := sql.Open("mysql", "root:root@tcp(localhost:3306)/video_service?charset=utf8&parseTime=true")
@@ -141,6 +122,6 @@ func TestCoverArray(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Println(result)
+	b, _ := json.MarshalIndent(result, "", "    ")
+	fmt.Println(string(b))
 }
