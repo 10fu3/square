@@ -192,11 +192,7 @@ var result []struct {
 		} `json:"actor"`
 	} `json:"video_actor"`
 }
-```
 
-### 6. print result
-```go
-b, _ := json.MarshalIndent(result, "", "    ")
-fmt.Println(string(b))
+err = json.Unmarshal([]byte(data), &result)
 ```
 
