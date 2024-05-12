@@ -14,13 +14,16 @@ import (
 
 func TestCoverArray(t *testing.T) {
 	structuredQuery := square.TableQuery{
-		From: "video",
+		HasMany: true,
+		From:    "video",
 		Fields: square.ColumnsQuery{
 			Columns: map[string]square.ColumnQuery{
 				"id":    {},
 				"title": {},
 				"video_actor": {
 					Relation: &square.TableQuery{
+						HasMany: true,
+						From:    "video_actor",
 						Relation: &square.RelationTableQuery{
 							ParentName: "video",
 							ThisName:   "video_actor",
@@ -31,14 +34,12 @@ func TestCoverArray(t *testing.T) {
 								},
 							},
 						},
-						From: "video_actor",
 						Fields: square.ColumnsQuery{
 							Columns: map[string]square.ColumnQuery{
 								"video_id": {},
 								"actor": {
 									Relation: &square.TableQuery{
-										IsFindOne: true,
-										From:      "actor",
+										From: "actor",
 										Fields: square.ColumnsQuery{
 											Columns: map[string]square.ColumnQuery{
 												"id":   {},
@@ -80,12 +81,8 @@ func TestCoverArray(t *testing.T) {
 				where.Eq("id", 1),
 			},
 		},
-		Offset: lib.Optional[uint]{
-			Value: 0,
-		},
-		Limit: lib.Optional[uint]{
-			Value: 10,
-		},
+		Offset: lib.NewOptional(uint(0)),
+		Limit:  lib.NewOptional(uint(10)),
 		Orderby: []square.OrderbyQuery{
 			{
 				Column: "id",
@@ -96,7 +93,7 @@ func TestCoverArray(t *testing.T) {
 
 	var result []struct {
 		Id         int    `json:"id"`
-		VideoTitle string `json:"video_title"`
+		VideoTitle string `json:"title"`
 		VideoActor []struct {
 			VideoId int `json:"video_id"`
 			Actor   struct {

@@ -13,14 +13,14 @@ import (
 )
 
 type TableQuery struct {
-	From      string
-	Fields    ColumnsQuery
-	Where     WhereQuery
-	Limit     lib.Optional[uint]
-	Offset    lib.Optional[uint]
-	Orderby   []OrderbyQuery
-	Relation  *RelationTableQuery
-	IsFindOne bool
+	From     string
+	Fields   ColumnsQuery
+	Where    WhereQuery
+	Limit    lib.Optional[uint]
+	Offset   lib.Optional[uint]
+	Orderby  []OrderbyQuery
+	Relation *RelationTableQuery
+	HasMany  bool
 }
 
 type RelationTableQuery struct {
@@ -114,7 +114,7 @@ func GenerateWhereQuery(
 		andmore)
 }
 
-func BuildWhereQuery(w *WhereQuery, thisTable string) (string, []any) {
+func buildWhereQuery(w *WhereQuery, thisTable string) (string, []any) {
 	var conditions = []string{"true"}
 	var preparedStmt = []any{}
 
@@ -136,7 +136,7 @@ func BuildWhereQuery(w *WhereQuery, thisTable string) (string, []any) {
 
 	if w.Relation != nil {
 		childrenWhereTable := common.MakeRandomStr()
-		whereQuery, wherePreparedStmt := BuildWhereQuery(w.Relation.Where, childrenWhereTable)
+		whereQuery, wherePreparedStmt := buildWhereQuery(w.Relation.Where, childrenWhereTable)
 		relationships := []string{}
 		for _, column := range w.Relation.Columns {
 			relationships = append(relationships, fmt.Sprintf(" ( \n%s.%s = %s.%s\n ) ", thisTable, column.Parent, childrenWhereTable, column.This))
@@ -152,7 +152,7 @@ func BuildWhereQuery(w *WhereQuery, thisTable string) (string, []any) {
 
 	if len(w.And) > 0 {
 		for _, and := range w.And {
-			andConditions, andPreparedStmt := BuildWhereQuery(&and, thisTable)
+			andConditions, andPreparedStmt := buildWhereQuery(&and, thisTable)
 			conditions = append(conditions, andConditions)
 			preparedStmt = append(preparedStmt, andPreparedStmt...)
 		}
@@ -161,7 +161,7 @@ func BuildWhereQuery(w *WhereQuery, thisTable string) (string, []any) {
 	if len(w.Or) > 0 {
 		orConditions := []string{}
 		for _, or := range w.Or {
-			orConditions, orPreparedStmt := BuildWhereQuery(&or, thisTable)
+			orConditions, orPreparedStmt := buildWhereQuery(&or, thisTable)
 			conditions = append(conditions, orConditions)
 			preparedStmt = append(preparedStmt, orPreparedStmt...)
 		}
@@ -169,7 +169,7 @@ func BuildWhereQuery(w *WhereQuery, thisTable string) (string, []any) {
 	}
 
 	if w.Not != nil {
-		notCondition, notPreparedStmt := BuildWhereQuery(w.Not, thisTable)
+		notCondition, notPreparedStmt := buildWhereQuery(w.Not, thisTable)
 		conditions = append(conditions, fmt.Sprintf("NOT (%s)", notCondition))
 		preparedStmt = append(preparedStmt, notPreparedStmt...)
 	}
@@ -238,7 +238,7 @@ func buildOneResultQuery(q *TableQuery) (GenerateQuery, []any, error) {
 		"__json__",
 	)
 
-	whereQuery, wherePstmt := BuildWhereQuery(&q.Where, innnerTableName)
+	whereQuery, wherePstmt := buildWhereQuery(&q.Where, innnerTableName)
 
 	innerSelect := fmt.Sprintf(
 		jsonArrayElement,
@@ -248,7 +248,6 @@ func buildOneResultQuery(q *TableQuery) (GenerateQuery, []any, error) {
 		whereQuery,
 	)
 
-	//todo: Subquery returns more than 1 row
 	preparedStmt = append(preparedStmt, wherePstmt...)
 
 	elemQuery := fmt.Sprintf(
@@ -326,7 +325,7 @@ func buildManyResultQuery(q *TableQuery) (GenerateQuery, []any, error) {
 		"__json__",
 	)
 
-	whereQuery, wherePstmt := BuildWhereQuery(&q.Where, innnerTableName)
+	whereQuery, wherePstmt := buildWhereQuery(&q.Where, innnerTableName)
 
 	innerSelect := fmt.Sprintf(
 		jsonArrayElement,
@@ -369,14 +368,64 @@ func buildManyResultQuery(q *TableQuery) (GenerateQuery, []any, error) {
 
 }
 
+/**
+ * BuildQuery: Build query from TableQuery
+ * @param q *TableQuery
+ * @return GeneratedQuery, PreparedStatement Variables, error
+ */
 func BuildQuery(q *TableQuery) (GenerateQuery, []any, error) {
-	if q.IsFindOne {
-		return buildOneResultQuery(q)
+	if q.HasMany {
+		return buildManyResultQuery(q)
 	}
-	return buildManyResultQuery(q)
+	return buildOneResultQuery(q)
 }
 
+/**
+ * FetchQuery: Fetch query from database
+ * @param db *sql.DB
+ * @param q *TableQuery
+ * @param result *T
+ * @return error
+ */
 func FetchQuery[T any](db *sql.DB, q *TableQuery, result *T) error {
+	buildQuery, pstmt, e := BuildQuery(q)
+
+	if e != nil {
+		return e
+	}
+
+	stmt, err := db.Prepare(string(buildQuery))
+
+	if err != nil {
+		return err
+	}
+
+	rows, err := stmt.Query(pstmt...)
+
+	if err != nil {
+		return err
+	}
+
+	var resultRawExecute string
+	for rows.Next() {
+		rows.Scan(&resultRawExecute)
+	}
+
+	json.Unmarshal([]byte(resultRawExecute), &result)
+
+	defer rows.Close()
+
+	return nil
+}
+
+/**
+ * FetchQueryTxn: Fetch query from database with transaction
+ * @param db *sql.Tx
+ * @param q *TableQuery
+ * @param result *T
+ * @return error
+ */
+func FetchQueryTxn[T any](db *sql.Tx, q *TableQuery, result *T) error {
 	buildQuery, pstmt, e := BuildQuery(q)
 
 	if e != nil {
