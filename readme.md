@@ -1,3 +1,11 @@
+# What this
+This software generates queries based on SQL represented by Golang structures. 
+
+The execution results produce JSON on MySQL, allowing the return of JSON that represents relations without any client-side joins being performed on the Golang runtime. 
+
+This project was implemented referencing a [pull request](https://github.com/prisma/prisma-engines/pull/4639) that implemented Prisma's relationJoin.
+
+# How to use
 ## example
 ### 1. create structured query
 ```go
