@@ -46,6 +46,7 @@ type ColumnQuery struct {
 
 type ColumnsQuery struct {
 	Columns map[string]ColumnQuery
+	Count   bool
 }
 
 type SelectColumnsQuery struct {
@@ -77,7 +78,7 @@ func BuildWhereOperator(w where.Op, table string) (string, []any) {
 }
 
 type WhereRelationQuery struct {
-	ParentTable   string
+	//ParentTable   string
 	ChildrenTable string
 	Columns       []RelationColumn
 	Where         *WhereQuery
@@ -192,7 +193,8 @@ var fieldJsonQuery = `JSON_OBJECT(%s) AS %s`
 var jsonArrayElement = `SELECT
 %s
 FROM %s AS %s
-WHERE %s`
+WHERE %s
+%s`
 
 var jsonQuery = `SELECT
 %s
@@ -246,6 +248,7 @@ func buildOneResultQuery(q *TableQuery) (GenerateQuery, []any, error) {
 		q.From,
 		innnerTableName,
 		whereQuery,
+		"", // not working group by
 	)
 
 	preparedStmt = append(preparedStmt, wherePstmt...)
@@ -285,6 +288,11 @@ func buildManyResultQuery(q *TableQuery) (GenerateQuery, []any, error) {
 	preparedStmt := []any{}
 	jsonFields := []string{}
 	dictInnerFields := map[string]struct{}{}
+	primitiveFields := []string{}
+
+	groupByFields := []string{}
+	groupByQuery := ""
+
 	//outerTableName := common.MakeRandomStr()
 	innnerTableName := common.MakeRandomStr()
 	for k, v := range q.Fields.Columns {
@@ -308,12 +316,23 @@ func buildManyResultQuery(q *TableQuery) (GenerateQuery, []any, error) {
 			dictInnerFields[fmt.Sprintf("(%s) AS %s", refQuery, k)] = struct{}{}
 			preparedStmt = append(preparedStmt, pstmt...)
 		} else {
+			primitiveFields = append(primitiveFields, fmt.Sprintf(v.ColumnName))
 			dictInnerFields[fmt.Sprintf("`%s`.`%s`", innnerTableName, v.ColumnName)] = struct{}{}
 		}
 	}
 	for _, orderByColumn := range q.Orderby {
 		dictInnerFields[fmt.Sprintf("`%s`.`%s`", innnerTableName, orderByColumn.Column)] = struct{}{}
 	}
+
+	if q.Fields.Count {
+		jsonFields = append(jsonFields, fmt.Sprintf("'%s', %s.%s", "count", innnerTableName, "__count__"))
+		dictInnerFields["COUNT(*) AS __count__"] = struct{}{}
+		for _, k := range primitiveFields {
+			groupByFields = append(groupByFields, k)
+		}
+		groupByQuery = fmt.Sprintf("GROUP BY %s", strings.Join(groupByFields, ", "))
+	}
+
 	innerFields := []string{}
 	for k := range dictInnerFields {
 		innerFields = append(innerFields, k)
@@ -333,6 +352,7 @@ func buildManyResultQuery(q *TableQuery) (GenerateQuery, []any, error) {
 		q.From,
 		innnerTableName,
 		whereQuery,
+		groupByQuery,
 	)
 
 	preparedStmt = append(preparedStmt, wherePstmt...)

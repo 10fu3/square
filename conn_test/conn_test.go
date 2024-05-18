@@ -17,6 +17,7 @@ func TestCoverArray(t *testing.T) {
 		HasMany: true,
 		From:    "video",
 		Fields: square.ColumnsQuery{
+			Count: true,
 			Columns: map[string]square.ColumnQuery{
 				"id":    {},
 				"title": {},
@@ -77,8 +78,21 @@ func TestCoverArray(t *testing.T) {
 			},
 		},
 		Where: square.WhereQuery{
-			Column: []where.Op{
-				where.Eq("id", 1),
+			Relation: &square.WhereRelationQuery{
+				ChildrenTable: "video_actor",
+				Columns: []square.RelationColumn{
+					{
+						Parent: "id",
+						This:   "video_id",
+					},
+				},
+				Where: &square.WhereQuery{
+					Not: &square.WhereQuery{
+						Column: []where.Op{
+							where.IsNull("actor_id"),
+						},
+					},
+				},
 			},
 		},
 		Offset: lib.NewOptional(uint(0)),
@@ -101,6 +115,7 @@ func TestCoverArray(t *testing.T) {
 				Name string `json:"name"`
 			} `json:"actor"`
 		} `json:"video_actor"`
+		Count int `json:"count"`
 	}
 
 	g, _, _ := square.BuildQuery(&structuredQuery)
